@@ -1,0 +1,51 @@
+version: "3"
+services:
+  postgres:
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=postgres_password
+  redis:
+    image: "redis:latest"
+  nginx:
+    depends_on:
+      - api
+      - client
+    restart: always
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./nginx
+    ports:
+      - "3050:80"
+  api:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./server
+    volumes:
+      - /app/node_modules # a bookmark on the app node modules to say, inside the container, don't override this folder, just leave that as is
+      - ./server:/app # look at server directory and copy inside there to the app folder of the container
+    environment: #some number environment variables
+      - REDIS_HOST=redis # take it from above services
+      - REDIS_PORT=6379 # found 6379 from Redis in docker hub
+      - PGUSER=postgres # default value
+      - PGHOST=postgres # take it from above services
+      - PGDATABASE=postgres
+      - PGPASSWORD=postgres_password
+      - PGPORT=5432 # found 5432 from postgres in docker hub
+  client:
+    stdin_open: true
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./client
+    volumes:
+      - /app/node_modules
+      - ./client:/app
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: ./worker
+    volumes:
+      - /app/node_modules
+      - ./worker:/app
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
