@@ -1,0 +1,24 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - docker build -t parinaaz/react-test -f ./client/Dockerfile.dev ./client
+
+# it runs couple of tests
+script:
+  - docker run -e CI=true parinaaz/react-test npm test
+
+# built out some production versions of each of our subprojects
+after_success:
+  - docker build -t parinaaz/multi-client ./client
+  - docker build -t parinaaz/multi-nginx ./nginx
+  - docker build -t parinaaz/multi-server ./server
+  - docker build -t parinaaz/multi-worker ./worker
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take those images and push them to docker hub
+  - docker push parinaaz/multi-client
+  - docker push parinaaz/multi-nginx
+  - docker push parinaaz/multi-server
+  - docker push parinaaz/multi-worker
